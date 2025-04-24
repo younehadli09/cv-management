@@ -1,0 +1,21 @@
+/cv-manager
+│
+├── frontend/              → Next.js
+│   ├── pages/
+│   ├── components/
+│   ├── public/
+│   └── styles/
+│
+├── backend/               → Node.js + Express
+│   ├── routes/            → Endpoints REST
+│   ├── controllers/
+│   ├── utils/
+│   ├── db.js              → Connexion PostgreSQL
+│   ├── server.js
+│   └── schemas/           → Fichier XSD + fonctions de validation XML
+│
+├── data/                  → Fichiers XML et XSLT
+│   ├── cv.xml
+│   ├── cv.xsd
+│   └── cv.xslt
+└── README.md
