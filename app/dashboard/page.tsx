@@ -33,7 +33,6 @@ export default function Dashboard() {
       const res = await fetch('http://localhost:5000/all_cvs');
       const text = await res.text();
       
-      // Parse the HTML response to extract CV data
       const parser = new DOMParser();
       const doc = parser.parseFromString(text, 'text/html');
       const rows = doc.querySelectorAll('tbody tr');
@@ -42,7 +41,7 @@ export default function Dashboard() {
         const id = row.querySelector('td:first-child')?.textContent;
         return {
           id: Number(id),
-          xml_data: '' // We don't need the full XML here
+          xml_data: ''
         };
       });
       
@@ -62,6 +61,40 @@ export default function Dashboard() {
       setSelectedCv({id, html});
     } catch (error) {
       console.error('Error fetching CV:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteCV = async (id: number) => {
+    if (!confirm(`Are you sure you want to delete CV ${id}?`)) return;
+    
+    try {
+      setLoading(true);
+      const response = await fetch('http://localhost:5000/delete_element', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          xpath_query: `//cv[@id='${id}']`
+        })
+      });
+
+      if (response.ok) {
+        // Remove the deleted CV from the list
+        setCvs(cvs.filter(cv => cv.id !== id));
+        // Clear selected CV if it was the deleted one
+        if (selectedCv?.id === id) {
+          setSelectedCv(null);
+        }
+        alert(`CV ${id} deleted successfully`);
+      } else {
+        throw new Error('Failed to delete CV');
+      }
+    } catch (error) {
+      console.error('Error deleting CV:', error);
+      alert('Error deleting CV');
     } finally {
       setLoading(false);
     }
@@ -93,12 +126,12 @@ export default function Dashboard() {
       {/* Search Section */}
       <div className="mb-6 p-4 bg-gray-50 rounded-lg">
         <div className="flex items-center gap-2 mb-4">
-        <input
+          <input
             type="text"
             placeholder="Enter XPath query (e.g., //experience[@poste='Developer'])"
             value={xpath}
             onChange={(e) => setXpath(e.target.value)}
-            className="flex-1 border p-2 rounded text-gray-800 bg-white" // Added text-gray-800 and bg-white
+            className="flex-1 border p-2 rounded text-gray-800 bg-white"
           />
           <button 
             onClick={handleSearch} 
@@ -132,13 +165,22 @@ export default function Dashboard() {
                   <td className="border p-3">{cv.id}</td>
                   <td className="border p-3">CV {cv.id}</td>
                   <td className="border p-3">
-                    <button
-                      onClick={() => handleViewCV(cv.id)}
-                      className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded mr-2"
-                      disabled={loading}
-                    >
-                      View
-                    </button>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleViewCV(cv.id)}
+                        className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded"
+                        disabled={loading}
+                      >
+                        View
+                      </button>
+                      <button
+                        onClick={() => handleDeleteCV(cv.id)}
+                        className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded"
+                        disabled={loading}
+                      >
+                        Delete
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -171,34 +213,34 @@ export default function Dashboard() {
         <div className="mt-8">
           <h2 className="text-xl font-semibold mb-3">Search Results</h2>
           <div className="space-y-4">
-  {filterResults.map((result, i) => (
-    <div key={i} className="p-4 border rounded-lg bg-gray-50 dark:bg-gray-800">
-      <h3 className="font-bold text-lg mb-2 dark:text-white">CV ID: {result.cv_id}</h3>
-      <div className="space-y-3">
-        {result.matches.map((match, j) => (
-          <div key={j} className="p-3 bg-white dark:bg-gray-700 rounded border dark:border-gray-600">
-            <div className="text-sm text-gray-500 dark:text-gray-300 mb-1">
-              Match type: {match.match_type}
-            </div>
-            <pre className="p-2 bg-gray-100 dark:bg-gray-600 rounded overflow-auto text-sm text-gray-800 dark:text-gray-200">
-              {match.match}
-            </pre>
-            {match.parent && (
-              <>
-                <div className="text-sm text-gray-500 dark:text-gray-300 mt-2 mb-1">
-                  Parent context:
+            {filterResults.map((result, i) => (
+              <div key={i} className="p-4 border rounded-lg bg-gray-50 dark:bg-gray-800">
+                <h3 className="font-bold text-lg mb-2 dark:text-white">CV ID: {result.cv_id}</h3>
+                <div className="space-y-3">
+                  {result.matches.map((match, j) => (
+                    <div key={j} className="p-3 bg-white dark:bg-gray-700 rounded border dark:border-gray-600">
+                      <div className="text-sm text-gray-500 dark:text-gray-300 mb-1">
+                        Match type: {match.match_type}
+                      </div>
+                      <pre className="p-2 bg-gray-100 dark:bg-gray-600 rounded overflow-auto text-sm text-gray-800 dark:text-gray-200">
+                        {match.match}
+                      </pre>
+                      {match.parent && (
+                        <>
+                          <div className="text-sm text-gray-500 dark:text-gray-300 mt-2 mb-1">
+                            Parent context:
+                          </div>
+                          <pre className="p-2 bg-gray-100 dark:bg-gray-600 rounded overflow-auto text-sm text-gray-800 dark:text-gray-200">
+                            {match.parent}
+                          </pre>
+                        </>
+                      )}
+                    </div>
+                  ))}
                 </div>
-                <pre className="p-2 bg-gray-100 dark:bg-gray-600 rounded overflow-auto text-sm text-gray-800 dark:text-gray-200">
-                  {match.parent}
-                </pre>
-              </>
-            )}
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
-    </div>
-  ))}
-</div>
         </div>
       )}
     </div>
